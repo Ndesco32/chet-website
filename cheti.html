@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="sw">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Cheti cha Kozi ya Cyber Security</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f0f4f8;
+      color: #222;
+      text-align: center;
+    }
+    #loginSection, #certificateSection {
+      max-width: 400px;
+      margin: 20px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #aaa;
+    }
+    input[type="text"], input[type="password"] {
+      width: 100%;
+      padding: 8px;
+      font-size: 16px;
+      margin-bottom: 15px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      box-sizing: border-box;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      margin: 5px;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #userImageCert {
+      max-width: 100px;
+      max-height: 100px;
+      border-radius: 50%;
+      margin-bottom: 15px;
+      border: 3px solid #007bff;
+      display: none;
+      object-fit: cover;
+    }
+    #welcomeMsg {
+      font-size: 18px;
+      color: #007bff;
+      margin-bottom: 15px;
+    }
+    #loginStatus {
+      color: red;
+      margin-bottom: 15px;
+    }
+  </style>
+  <!-- jsPDF library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+
+  <h1>Karibu kwenye Kozi ya Cyber Security</h1>
+
+  <div id="loginSection">
+    <form id="loginForm">
+      <label for="loginUsername">Jina la Mtumiaji (Username):</label><br />
+      <input type="text" id="loginUsername" name="loginUsername" required placeholder="Andika jina la mtumiaji" /><br />
+      <label for="loginPassword">Nenosiri (Password):</label><br />
+      <input type="password" id="loginPassword" name="loginPassword" required placeholder="Andika nenosiri" /><br />
+      <button type="submit">Ingia</button>
+    </form>
+    <p id="loginStatus"></p>
+  </div>
+
+  <div id="certificateSection" style="display:none;">
+    <img id="userImageCert" alt="Picha ya Mtumiaji" />
+    <div id="welcomeMsg"></div>
+    <p>Bonyeza kitufe hapa chini kupakua cheti chako cha kumaliza kozi.</p>
+    <button onclick="generateCertificate()">Pakua Cheti</button><br />
+    <button onclick="logout()">Toka (Logout)</button>
+  </div>
+
+  <script>
+    // Access jsPDF from the global window
+    const { jsPDF } = window.jspdf;
+
+    const loginForm = document.getElementById('loginForm');
+    const loginStatus = document.getElementById('loginStatus');
+    const loginSection = document.getElementById('loginSection');
+    const certificateSection = document.getElementById('certificateSection');
+    const welcomeMsg = document.getElementById('welcomeMsg');
+    const userImageCert = document.getElementById('userImageCert');
+
+    // Check login status on load
+    window.onload = () => {
+      const loggedIn = sessionStorage.getItem('loggedIn');
+      if (loggedIn === 'true') {
+        showCertificateSection();
+      }
+    };
+
+    loginForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const username = document.getElementById('loginUsername').value.trim();
+      const password = document.getElementById('loginPassword').value.trim();
+
+      if (!username || !password) {
+        loginStatus.textContent = 'Tafadhali jaza jina na nenosiri.';
+        return;
+      }
+
+      const userDataStr = localStorage.getItem("user_" + username);
+      if (!userDataStr) {
+        loginStatus.textContent = "Akaunti haipo, tafadhali jisajili kwanza kwenye app yako ya mwanzo.";
+        return;
+      }
+
+      const userData = JSON.parse(userDataStr);
+      if (userData.password !== password) {
+        loginStatus.textContent = "Nenosiri sio sahihi, jaribu tena.";
+        return;
+      }
+
+      // Login success
+      sessionStorage.setItem('loggedIn', 'true');
+      sessionStorage.setItem('username', username);
+      if (userData.imgData) {
+        sessionStorage.setItem('userImg', userData.imgData);
+      } else {
+        sessionStorage.removeItem('userImg');
+      }
+
+      loginStatus.textContent = '';
+      showCertificateSection();
+    });
+
+    function showCertificateSection() {
+      loginSection.style.display = 'none';
+      certificateSection.style.display = 'block';
+
+      const username = sessionStorage.getItem('username');
+      const userImg = sessionStorage.getItem('userImg');
+      welcomeMsg.textContent = `Karibu, ${username}!`;
+
+      if (userImg) {
+        userImageCert.src = userImg;
+        userImageCert.style.display = 'inline-block';
+      } else {
+        userImageCert.style.display = 'none';
+      }
+    }
+
+    function logout() {
+      sessionStorage.clear();
+      location.reload();
+    }
+
+    function generateCertificate() {
+      const username = sessionStorage.getItem('username');
+      if (!username) {
+        alert('Tafadhali ingia kwanza.');
+        return;
+      }
+      const userImg = sessionStorage.getItem('userImg');
+
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'pt',
+        format: 'a4',
+      });
+
+      const margin = 40;
+      const w = doc.internal.pageSize.width;
+      const h = doc.internal.pageSize.height;
+
+      // Background color (dark green)
+      doc.setFillColor(20, 40, 20);
+      doc.rect(0, 0, w, h, 'F');
+
+      // Border rectangle
+      doc.setDrawColor('#00ff00');
+      doc.setLineWidth(3);
+      doc.rect(margin, margin, w - margin * 2, h - margin * 2);
+
+      // Watermark (center, rotated)
+      doc.setFontSize(50);
+      doc.setTextColor(0, 255, 0, 30); // light green, transparent
+      doc.setFont('helvetica', 'bold');
+      doc.text('CYBER SECURITY  BY NDESCO', w / 2, h / 2, { align: 'center', angle: 30 });
+
+      // Heading
+      doc.setFontSize(48);
+      doc.setTextColor('#00ff00');
+      doc.setFont('helvetica', 'bold');
+      doc.text('CYBER SECURITY', w / 2, 100, { align: 'center' });
+
+      // Subtitle below heading
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'normal');
+      doc.text('SHORT COURSE CERTIFICATE', w / 2, 130, { align: 'center' });
+
+      // Horizontal line
+      doc.setDrawColor('#00ff00');
+      doc.setLineWidth(1.5);
+      doc.line(margin + 20, 150, w - margin - 20, 150);
+
+      // Recipient info
+      doc.setFontSize(18);
+      doc.setTextColor('#00ff00');
+      doc.text('Tunathibitisha kuwa', w / 2, 190, { align: 'center' });
+
+      // Username in hacker green
+      doc.setFontSize(28);
+      doc.setTextColor('#00ff00');
+      doc.text(username, w / 2, 230, { align: 'center' });
+
+      doc.setFontSize(18);
+      doc.setTextColor('#00ff00');
+      doc.text('amefanikiwa kumaliza kozi ya Cyber Security.', w / 2, 270, { align: 'center' });
+
+      // Date
+      const today = new Date();
+      const options = { year: 'numeric', month: 'long', day: 'numeric' };
+      const dateStr = today.toLocaleDateString('sw-TZ', options);
+      doc.setTextColor('#00ff00');
+      doc.text(`Tarehe: ${dateStr}`, w / 2, 310, { align: 'center' });
+
+      // Draw user image if available (top left)
+      if (userImg) {
+        try {
+          const imgProps = doc.getImageProperties(userImg);
+          const imgWidth = 100;
+          const imgHeight = (imgProps.height / imgProps.width) * imgWidth;
+          const imgX = margin + 10;
+          const imgY = margin + 10;
+          doc.addImage(userImg, 'JPEG', imgX, imgY, imgWidth, imgHeight, undefined, 'FAST');
+        } catch(e) {
+          console.warn('Image not added:', e);
+        }
+      }
+
+      // Signature-like text (muandiko mchorazo)
+      doc.setFont('cursive', 'normal');
+      doc.setFontSize(28);
+      doc.setTextColor('#00ff00');
+      const sigText = 'Ally Ndesco';
+      const sigX = w / 4;
+      const sigY = h - 100;
+      doc.text(sigText, sigX, sigY);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(16);
+      doc.setTextColor('#00ff00');
+      doc.text('Msimamizi wa Kozi', sigX, sigY + 20);
+
+      // Right signature (organization)
+      const rightSigX = (w / 4) * 3;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(20);
+      doc.setTextColor('#00ff00');
+      doc.text('NDESCO', rightSigX, sigY);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(14);
+      doc.setTextColor('#00ff00');
+      doc.text('Mkuu wa Mafunzo', rightSigX, sigY + 20);
+
+      // Save PDF
+      doc.save(`Cheti_CyberSecurity_${username}.pdf`);
+    }
+  </script>
+
+</body>
+</html>
